@@ -200,7 +200,7 @@ __ORTAGTPL__;
 		$table_q = 'CREATE TABLE IF NOT EXISTS ' . _TAGEX_TABLE . ' ('
 				 . " `inum`    INT(9)        NOT NULL default '0' PRIMARY KEY, "
 				 . ' `itags`   TEXT          NOT NULL, '
-				 . ' `itagreg` TIMESTAMP(14) NOT NULL'
+				 . ' `itagreg` TIMESTAMP NOT NULL'
 				 . ' )';
 		sql_query($table_q);
 		$table_q = 'CREATE TABLE IF NOT EXISTS ' . _TAGEX_KLIST_TABLE . ' ('
@@ -208,7 +208,7 @@ __ORTAGTPL__;
 				 . ' `tag`         VARCHAR(255)           default NULL, '
 				 . ' `inums`       TEXT          NOT NULL, '
 				 . " `inums_count` INT(11)       NOT NULL default '0', "
-				 . ' `ireg`        TIMESTAMP(14) NOT NULL'
+				 . ' `ireg`        TIMESTAMP NOT NULL'
 				 . ' )';
 		sql_query($table_q);
 	}
