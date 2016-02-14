@@ -403,11 +403,7 @@ __ORTAGTPL__;
 				$value = array_map("stripslashes", $value);
 			}
 			if (!array_map("is_numeric",$value)) {
-				if (version_compare(phpversion(),"4.3.0") == "-1") {
-					$value = array_map("mysql_escape_string", $value);
-				} else {
-					$value = array_map("mysql_real_escape_string", $value);
-				}
+				$value = array_map("sql_real_escape_string", $value);
 			} else {
 				$value = intval($value);
 			}
@@ -416,11 +412,7 @@ __ORTAGTPL__;
 				$value = stripslashes($value);
 			}
 			if (!is_numeric($value)) {
-				if (version_compare(phpversion(), "4.3.0") == "-1") {
-					$value = "'" . mysql_escape_string($value) . "'";
-				} else {
-					$value = "'" . mysql_real_escape_string($value) . "'";
-				}
+				$value = "'" . sql_real_escape_string($value) . "'";
 			} else {
 				$value     = intval($value);
 			}
@@ -632,8 +624,8 @@ __ORTAGTPL__;
 		$item_id = intval($data['variables']['itemid']);
 		$query   = 'SELECT itags FROM %s WHERE inum = %d';
 		$result  = sql_query(sprintf($query, _TAGEX_TABLE, $item_id));
-		if (mysql_num_rows($result) > 0) {
-			$itags  = mysql_result($result,0,0);
+		if (sql_num_rows($result) > 0) {
+			$itags  = sql_result($result,0,0);
 		}
 		$oldforj = str_replace("\n", '\n', htmlspecialchars($itags, ENT_QUOTES, _CHARSET));
 //		$blogid  = getBlogIDFromItemID($item_id);
@@ -739,10 +731,10 @@ __ORTAGTPL__;
 				 . '       AND inums REGEXP "(^|,)' . $inum . '(,|$)"'
 				 . ' ORDER BY ireg DESC';
 		$findres = sql_query($f_query);
-		if (mysql_num_rows($findres) == 0) {
+		if (sql_num_rows($findres) == 0) {
 			return;
 		}
-		$temp_inums = mysql_result($findres, 0, 0);
+		$temp_inums = sql_result($findres, 0, 0);
 		if (preg_match('/^\d+$/', $temp_inums) && $inum == $temp_inums) {
 			$query = 'DELETE FROM %s WHERE tag = %s';
 			sql_query(sprintf($query, _TAGEX_KLIST_TABLE, $tag));
@@ -783,8 +775,8 @@ __ORTAGTPL__;
 				 . ' WHERE tag = ' . $tag
 				 . ' ORDER BY ireg DESC';
 		$findres = sql_query($f_query);
-		if (mysql_num_rows($findres) > 0) {
-			$temp_inums  = mysql_result($findres, 0, 0);
+		if (sql_num_rows($findres) > 0) {
+			$temp_inums  = sql_result($findres, 0, 0);
 			$inums_array = explode(',', $temp_inums);
 			if (!in_array($inum, $inums_array)) {
 				$inums       = $temp_inums . ',' . $inum;
@@ -843,7 +835,7 @@ __ORTAGTPL__;
 					$tres_query = 'SELECT * FROM %s WHERE scatid = %d';
 					$tres_query = sprintf($tres_query, $scatTable, $subcatid);
 					$tres       = sql_query($tres_query);
-					$ra         = mysql_fetch_array($tres, MYSQL_ASSOC);
+					$ra         = sql_fetch_array($tres, MYSQL_ASSOC);
 					if (array_key_exists('parentid', $ra)) {
 						$Children = array();
 						$Children = explode('/', $subcatid . $this->getChildren($subcatid));
@@ -891,7 +883,7 @@ __ORTAGTPL__;
 				. ' WHERE i.idraft = 0'
 				. $where;
 		$res    = sql_query(sprintf($iquery, sql_table('item')));
-		while ($row = mysql_fetch_row($res)) {
+		while ($row = sql_fetch_row($res)) {
 			$existInums[] = $row[0];
 		}
 		return $existInums;
@@ -970,7 +962,7 @@ __ORTAGTPL__;
 		$existInums = array();
 		$existInums = $this->scanExistItem($narrowMode, $blogid);
 		$res        = sql_query(sprintf('SELECT * FROM %s', _TAGEX_KLIST_TABLE));
-		while ($o = mysql_fetch_object($res)) {
+		while ($o = sql_fetch_object($res)) {
 			$tagsk[$o->tag] = explode(',', $o->inums);
 			if ($existInums) {
 				$tagsk[$o->tag] = array_intersect($tagsk[$o->tag], $existInums);
@@ -1161,7 +1153,7 @@ __ORTAGTPL__;
 				if ($skinType == 'item') {
 					$q   = 'SELECT * FROM %s WHERE inum = %d';
 					$res = sql_query(sprintf($q, _TAGEX_TABLE, $itemid));
-					while ($o = mysql_fetch_object($res)) {
+					while ($o = sql_fetch_object($res)) {
 						$temp_tags_array = preg_split("/[\n,]+/", trim($o->itags));
 						$temp_tags_count = count($temp_tags_array);
 						for ($i=0; $i < $temp_tags_count; $i++) {
@@ -1281,7 +1273,7 @@ __ORTAGTPL__;
 								 . '   inumber';
 						$sTitles = sql_query($qQuery);
 						$i       = 0;
-						while ($sTitle = mysql_fetch_assoc($sTitles)) {
+						while ($sTitle = sql_fetch_assoc($sTitles)) {
 							$shortTitle = mb_convert_encoding($sTitle['short_title'], _CHARSET, _CHARSET);
 							$shortTitle = htmlspecialchars($shortTitle, ENT_QUOTES, _CHARSET);
 							$printData['tagItem']
@@ -1364,7 +1356,7 @@ __ORTAGTPL__;
 		$iid = intval($item->itemid);
 		$q   = 'SELECT * FROM %s WHERE inum = %d';
 		$res = sql_query(sprintf($q, _TAGEX_TABLE, $iid));
-		while ($o = mysql_fetch_object($res)) {
+		while ($o = sql_fetch_object($res)) {
 			$temp_tags_array = preg_split("/[\n,]+/", trim($o->itags));
 			$temp_tags_count = count($temp_tags_array);
 			for ($i=0; $i < $temp_tags_count; $i++) {
@@ -1429,7 +1421,7 @@ __ORTAGTPL__;
 		$mcatTable = sql_table('plug_multiple_categories_sub');
 		$que       = sprintf($que, $mcatTable, $subcat_id);
 		$res       = sql_query($que);
-		while ($so =  mysql_fetch_object($res)) {
+		while ($so =  sql_fetch_object($res)) {
 			$r .= $this->getChildren($so->scatid)
 				. '/'
 				. $so->scatid;
