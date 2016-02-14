@@ -287,7 +287,7 @@ __ORTAGTPL__;
 				'タグレベルの最小値'
 			),
 		);
-		switch (ereg_replace('[\\|/]', '', getLanguageName())) {
+		switch (str_replace(array('\\','/'), '', getLanguageName())) {
 			case 'japanese-euc':
 				foreach ($multilang as $key => $value) {
 					define($key, mb_convert_encoding($value[1], 'EUC-JP', 'UTF-8'));
@@ -452,14 +452,14 @@ __ORTAGTPL__;
 							 . 'WHERE tdname = %s';
 		$q_query             = sprintf($q_query, $templateDescTable, $currTemplateName);
 		$currentTemplateDesc = quickQuery($q_query);
-		if (eregi('<highlightTagsAll>', $currentTemplateDesc)) {
+		if (preg_match('@<highlightTagsAll>@i', $currentTemplateDesc)) {
 			$tags = $this->scanExistTags(0, 99999999);
 			if (empty($tags)) {
 				return false;
 			} else {
 				$highlightKeys = array_keys($tags);
 			}
-		} elseif (eregi('<highlightTags>', $currentTemplateDesc)) {
+		} elseif (preg_match('@<highlightTags>@i', $currentTemplateDesc)) {
 			$requestT = $this->getNoDecodeQuery('tag');
 			if (empty($requestT)) {
 				return false;
@@ -1099,12 +1099,12 @@ __ORTAGTPL__;
 			$type = 'list20/2/1/1/4';
 		}
 		$type = explode('/', $type);
-		if (eregi('list', $type[0])) {
-			$amount  = eregi_replace("list", "", $type[0]);
+		if (preg_match('@list@i', $type[0])) {
+			$amount  = str_ireplace("list", "", $type[0]);
 			$type[0] = 'list';
 // keywords="TAG"
-		} elseif (eregi('meta', $type[0])) {
-			$amount  = eregi_replace("meta", "", $type[0]);
+		} elseif (preg_match('@meta@i', $type[0])) {
+			$amount  = str_ireplace("meta", "", $type[0]);
 			$type[0] = 'meta';
 		}
 // default amount
@@ -1326,11 +1326,6 @@ __ORTAGTPL__;
 
 // format outputdata and data output
 						$eachTag[$t] .= $template['tagItemHeader'];
-/*
-						if (!ereg('<%tagitems%>', $template['tagIndex'])) {//<%
-							$eachTag[$t] .= $tagitem;
-						}
-*/
 						$eachTag[$t] .= $template['tagItemFooter'];
 						$t++;
 					}
