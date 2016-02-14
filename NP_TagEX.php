@@ -575,7 +575,7 @@ __ORTAGTPL__;
 				   . '<textarea id="tagex" name="itags" rows="' . intval($tagrows)
 				   . '" cols="' . intval($tagcols) . '" style="' . $txAStyles . '"'
 				   . ' class="tagex">'
-				   . htmlspecialchars($itags) . '</textarea>' . "\n\t\t"
+				   . htmlspecialchars($itags, ENT_QUOTES, _CHARSET) . '</textarea>' . "\n\t\t"
 //				   . '</p>'
 				   . '<script language="JavaScript" type="text/javascript">' . "\n"
 				   . '<!--' . "\n"
@@ -600,7 +600,7 @@ __ORTAGTPL__;
 			$existTags = array_keys($existTags);
 		}
 		for ($i=0; $i < count($existTags); $i++) {
-			$exTags    = htmlspecialchars($existTags[$i]);
+			$exTags    = htmlspecialchars($existTags[$i], ENT_QUOTES, _CHARSET);
 			$printData = '<li><a href="javascript:insertag'
 					   . "('" . $exTags . "')" . '">'
 					   . $exTags . '</a></li>' . "\n";
@@ -635,7 +635,7 @@ __ORTAGTPL__;
 		if (mysql_num_rows($result) > 0) {
 			$itags  = mysql_result($result,0,0);
 		}
-		$oldforj = str_replace("\n", '\n', htmlspecialchars($itags));
+		$oldforj = str_replace("\n", '\n', htmlspecialchars($itags, ENT_QUOTES, _CHARSET));
 //		$blogid  = getBlogIDFromItemID($item_id);
 		$blogid  = intval($data['blog']->blogid);//$blogid);
 // Call exstra form
@@ -1411,7 +1411,7 @@ __ORTAGTPL__;
 		if (_CHERSET != 'UTF-8') {
 			$str = mb_convert_encoding($str, _CHARSET, "UTF-8");
 		}
-		$str = htmlspecialchars($str);
+		$str = htmlspecialchars($str, ENT_QUOTES, _CHARSET);
 		return $str;
 	}
 
