@@ -314,7 +314,7 @@ __ORTAGTPL__;
 	function init()
 	{
 		global $CONF;
-		$this->defineMultilanguage;
+		$this->defineMultilanguage();
 		$usePathInfo = ($CONF['URLMode'] == 'pathinfo');
 		$this->maURL = (($this->plugCheck('MagicalURL2') || $this->plugCheck('Magical')) && $usePathInfo);
 		$this->cuURL = ($this->plugCheck('CustomURL') && $usePathInfo);
