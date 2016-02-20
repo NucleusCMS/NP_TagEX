@@ -456,6 +456,7 @@ __ORTAGTPL__;
 			if (empty($requestT)) {
 				return false;
 			}
+			$requestT = rawurldecode($requestT);
 			$requestTarray = $this->splitRequestTags($requestT);
 			$reqAND        = array_map(array(&$this, "_rawdecode"), $requestTarray['and']);
 			if ($requestTarray['or']) {
@@ -1031,6 +1032,7 @@ __ORTAGTPL__;
 	function splitRequestTags($q)
 	{
 // extract TAGs to array
+		if(strpos($q,'%')!==false) $q = rawurldecode($q);
 		if (!strpos($q, '+') && !strpos($q, ':')) {
 			$res['and'][0] = $q;
 			return $res;
@@ -1056,9 +1058,10 @@ __ORTAGTPL__;
 		if ($key != 'tag') {
 			return false;
 		}
-		$reqTags = $this->getNoDecodeQuery('tag');
-		if (!empty($reqTags)) {
-			$reqTagsArr = $this->splitRequestTags($reqTags);
+		$requestT = $this->getNoDecodeQuery('tag');
+		if (!empty($requestT)) {
+			$requestT = rawurldecode($requestT);
+			$reqTagsArr = $this->splitRequestTags($requestT);
 			$reqAND     = array_map(array(&$this, "_rawdecode"), $reqTagsArr['and']);
 			if ($requestTarray['or']) {
 				$reqOR = array_map(array(&$this, "_rawdecode"), $reqTagsArr['or']);
@@ -1106,10 +1109,11 @@ __ORTAGTPL__;
 		$type        = $type + $defaultType;
 		$requestT = $this->getNoDecodeQuery('tag');
 		if (!empty($requestT)) {
+			$requestT = rawurldecode($requestT);
 			$requestTarray = $this->splitRequestTags($requestT);
-			$reqAND        = array_map(array(&$this, "_rawdecode"), $requestTarray['and']);
+			$reqAND        = $requestTarray['and'];
 			if ($requestTarray['or']) {
-				$reqOR = array_map(array(&$this, "_rawdecode"), $requestTarray['or']);
+				$reqOR = $requestTarray['or'];
 			}
 		}
 		switch($type[0]){
@@ -1344,6 +1348,7 @@ __ORTAGTPL__;
 // <highlight selected TAGs mod by shizuki>
 		$requestT = $this->getNoDecodeQuery('tag');
 		if (!empty($requestT)) {
+			$requestT = rawurldecode($requestT);
 			$requestTarray = $this->splitRequestTags($requestT);
 			$reqAND        = array_map(array(&$this, "_rawdecode"), $requestTarray['and']);
 			if($requestTarray['or']) {
@@ -1384,17 +1389,6 @@ __ORTAGTPL__;
 //			echo 'Tag: ' . implode(' / ', $taglist);
 			echo implode(' / ', $taglist);
 		}
-	}
-
-	function _rawencode($str)
-	{
-
-		if (_CHERSET != 'UTF-8') {
-			$str = mb_convert_encoding($str, "UTF-8", _CHARSET);
-		}
-		$str = rawurlencode($str);
-		$str = preg_replace('|[^a-z0-9-~+_.?#=&;,/:@%]|i', '', $str);
-		return $str;
 	}
 
 	function _rawdecode($str)
@@ -1462,6 +1456,7 @@ __ORTAGTPL__;
 		}
 
 		if (!empty($ready)) {
+			$ready = rawurldecode($ready);
 			$requestTagsArray = $this->splitRequestTags($ready);
 			foreach ($requestTagsArray['and'] as $key => $val) {
 				if (!$this->_isValidTag($val)) {
@@ -1483,56 +1478,12 @@ __ORTAGTPL__;
 		if (!$ready) {
 			$sep = '';
 		}
-//	<mod by shizuki>
-/*// <Original URL Generate code>
-//		if ($CONF['URLMode'] == 'pathinfo')
-//			$link = $CONF['IndexURL'] . '/tag/' . $ready . $sep . $this->_rawencode($tag);
-//		else
-//			$link = $CONF['IndexURL'] . '?tag=' . $ready . $sep . $this->_rawencode($tag);
-		$link = $b->getURL();
-		if (substr($link, -1) != '/') {
-			if (substr($link, -4) != '.php') {
-				$link .= '/';
-			}
-		}
-		if ($CONF['URLMode'] == 'pathinfo') {
-			$link .=  'tag/' . $ready . $sep . $this->_rawencode($tag);
-		} else {
-			$link .= '?tag=' . $ready . $sep . $this->_rawencode($tag);
-		}
-//  </ Original URL Generate code> */
-
-/*// <test code>
-        $CONF['BlogURL']   = $b->getURL();
-		$linkparams['tag'] = $ready . $sep . $this->_rawencode($tag);
-		$uri               = createBlogidLink($blogid, $linkparams);
-		if (strstr ($uri, '//')) {
-			$uri = preg_replace("/([^:])\/\//", "$1/", $uri);
-		}
-		return $uri;
-// </test code>*/
-
-// </mod by shizuki>*/
-
-//	<mod by shizuki>
-//		if ($manager->pluginInstalled('NP_CustomURL')) {
-			$linkparams['tag'] = $ready . $sep . $this->_rawencode($tag);
+			$linkparams['tag'] = $ready . $sep . $tag;
 			$uri               = createBlogidLink($blogid, $linkparams);
 			if (strstr ($uri, '//')) {
-				$uri = preg_replace("/([^:])\/\//", "$1/", $uri);
+				$uri = preg_replace("@([^:])//@", "$1/", $uri);
 			}
 			return $uri;
-/*		} elseif ($manager->pluginInstalled('NP_MagicalURL2') || $manager->pluginInstalled('NP_Magical')) {
-			$uri = createBlogidLink($blogid, $linkparams);
-			if (strstr ($uri, '//')) {
-				$uri = preg_replace("/([^:])\/\//", "$1/", $uri);
-			}
-			$uri = substr($uri, 0, -5) . '_tag' . $ready . $sep . $this->_rawencode($tag);
-			return $uri;
-		}
-// </mod by shizuki>*/
-
-//		return addLinkParams($link, $linkparams);
 	}
 
 /**
