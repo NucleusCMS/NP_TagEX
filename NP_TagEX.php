@@ -450,6 +450,8 @@ public $cuURL;
     function array_minus_array($a, $b)
     {
 // update Item's TAGs
+        $a = (array) $a;
+        $b = (array) $b;
         $c = array_diff($a,$b);
         $c = array_intersect($c, $a);
         return array_values($c);
