@@ -384,8 +384,8 @@ public $cuURL;
             return;
         }
         $inum   = intval($data['itemid']);
-        $query  = 'INSERT INTO %s (inum, itags) VALUES (%d, %s)';
-        $query  = sprintf($query, _TAGEX_TABLE, $inum, $this->quote_smart($itags));
+        $query  = 'INSERT INTO %s (inum, itags, itagreg) VALUES (%d, %s, %d)';
+        $query  = sprintf($query, _TAGEX_TABLE, $inum, $this->quote_smart($itags), time());
         sql_query($query);
         $temp_tags_array = preg_split("/[\r\n,]+/", $itags);
         for ($i=0; $i < count($temp_tags_array); $i++) {
@@ -406,8 +406,8 @@ public $cuURL;
         $query = 'DELETE FROM %s WHERE inum = %d';
         sql_query(sprintf($query, _TAGEX_TABLE, $inum));
         if (!empty($itags)) {
-            $query  = 'INSERT INTO %s (inum, itags) VALUES (%d, %s)';
-            $query  = sprintf($query, _TAGEX_TABLE, $inum, $this->quote_smart($itags));
+            $query  = 'INSERT INTO %s (inum, itags, itagreg) VALUES (%d, %s, %d)';
+            $query  = sprintf($query, _TAGEX_TABLE, $inum, $this->quote_smart($itags), time());
             sql_query($query);
         }
         $old_tags_array = $this->getTags($oldTags);
@@ -524,8 +524,8 @@ public $cuURL;
                 $inums_count = count($inums_array) + 1;
             }
         } else {
-            $q_query    = 'INSERT INTO %s (tag, inums, inums_count) VALUES (%s, %d, 1)';
-            sql_query(sprintf($q_query, _TAGEX_KLIST_TABLE, $tag, intval($inum)));
+            $q_query    = 'INSERT INTO %s (tag, inums, inums_count, ireg) VALUES (%s, %d, 1, %d)';
+            sql_query(sprintf($q_query, _TAGEX_KLIST_TABLE, $tag, intval($inum), time()));
         }
 
         if (!empty($inums)) {
