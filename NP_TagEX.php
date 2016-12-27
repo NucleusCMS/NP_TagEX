@@ -78,7 +78,7 @@ public $cuURL;
     function getURL()               {return 'http://japan.nucleuscms.org/wiki/plugins:tagex';}
     function getVersion()           {return '0.73';}
     function getDescription()       {return 'Tags Extension (for Japanese users)';}
-    function supportsFeature($what) {return in_array($what,array('SqlTablePrefix'));}
+    function supportsFeature($what) {return in_array($what,array('SqlTablePrefix','SqlApi','SqlApi_sqlite'));}
     
     /**
      * plugin install script
@@ -473,10 +473,10 @@ public $cuURL;
                  . '       AND inums REGEXP "(^|,)' . $inum . '(,|$)"'
                  . ' ORDER BY ireg DESC';
         $findres = sql_query($f_query);
-        if (sql_num_rows($findres) == 0) {
+        if (!$findres || !($row=sql_fetch_row($findres)) || empty($row)) {
             return;
         }
-        $temp_inums = sql_result($findres, 0, 0);
+        $temp_inums = $row[0];
         if (preg_match('/^\d+$/', $temp_inums) && $inum == $temp_inums) {
             $query = 'DELETE FROM %s WHERE tag = %s';
             sql_query(sprintf($query, _TAGEX_KLIST_TABLE, $tag));
@@ -516,8 +516,8 @@ public $cuURL;
                  . ' ORDER BY ireg DESC';
         $findres = sql_query($f_query);
         
-        if (sql_num_rows($findres) > 0) {
-            $temp_inums  = sql_result($findres, 0, 0);
+        if ($findres && ($row=sql_fetch_row($findres)) && !empty($row)) {
+            $temp_inums  = $row[0];
             $inums_array = explode(',', $temp_inums);
             if (!in_array($inum, $inums_array)) {
                 $inums       = $temp_inums . ',' . $inum;
@@ -528,7 +528,7 @@ public $cuURL;
             sql_query(sprintf($q_query, _TAGEX_KLIST_TABLE, $tag, intval($inum), time()));
         }
 
-        if (!empty($inums)) {
+        if (isset($inums) && !empty($inums)) {
             $q_query    = 'UPDATE %s SET inums = %s, inums_count = %d WHERE tag = %s';
             $iCount     = intval($inums_count);
             $quoteInums = $this->quote_smart($inums);
@@ -1273,14 +1273,18 @@ __ORTAGTPL__;
         $this->createOption('highlight',         _NPTAGEX_HILIGHT_NORM, 'text',     '<span class="highlight">\0</span>');
         $this->createOption('maxTagLevel',       _NPTAGEX_MAX_TAGLEBEL, 'text',     '6', 'datatype=numerical');
         $this->createOption('minTagLevel',       _NPTAGEX_MIN_TAGLEBEL, 'text',     '1', 'datatype=numerical');
-        $table_q = 'CREATE TABLE IF NOT EXISTS ' . _TAGEX_TABLE . ' ('
+
+		$INT_AUTO_INCREMENT_PRIMARY_KEY = 'INT(9) NOT NULL AUTO_INCREMENT PRIMARY KEY';
+		if (isset($this->is_db_sqlite) && $this->is_db_sqlite)
+			$INT_AUTO_INCREMENT_PRIMARY_KEY = 'INTEGER PRIMARY KEY AUTOINCREMENT';
+		$table_q = 'CREATE TABLE IF NOT EXISTS ' . _TAGEX_TABLE . ' ('
                  . " `inum`    INT(9)        NOT NULL default '0' PRIMARY KEY, "
                  . ' `itags`   TEXT          NOT NULL, '
                  . ' `itagreg` TIMESTAMP NOT NULL'
                  . ' )';
         sql_query($table_q);
         $table_q = 'CREATE TABLE IF NOT EXISTS ' . _TAGEX_KLIST_TABLE . ' ('
-                 . ' `listid`      INT(9)        NOT NULL AUTO_INCREMENT PRIMARY KEY, '
+                 . " `listid`      $INT_AUTO_INCREMENT_PRIMARY_KEY, "
                  . ' `tag`         VARCHAR(255)           default NULL, '
                  . ' `inums`       TEXT          NOT NULL, '
                  . " `inums_count` INT(11)       NOT NULL default '0', "
