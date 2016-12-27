@@ -44,6 +44,10 @@
  * 0.2  supports and/or query
  */
 
+/* Todo:
+	remove get_magic_quotes_gpc
+ */
+
 /**
  * define table names using plugin
  */
@@ -74,7 +78,7 @@ public $cuURL;
     function getURL()               {return 'http://japan.nucleuscms.org/wiki/plugins:tagex';}
     function getVersion()           {return '0.73';}
     function getDescription()       {return 'Tags Extension (for Japanese users)';}
-    function supportsFeature($what) {return in_array($what,array('SqlTablePrefix'));}
+    function supportsFeature($what) {return in_array($what,array('SqlTablePrefix','SqlApi','SqlApi_sqlite'));}
     
     /**
      * plugin install script
@@ -327,7 +331,7 @@ public $cuURL;
                    . '<div style="' . $divStyles . '" class="tagex"><ul>' . "\n";
         echo $printData;
         $tagOrder = intval($this->getOption('editTagOrder'));
-        if ($this->getOption('tagsonlycurrent') == no) {
+        if ($this->getOption('tagsonlycurrent') == "no") {
             $existTags = $this->scanExistTags(0, 99999999, $tagOrder);
         } else {
             $existTags = $this->scanExistTags(1, 99999999, $tagOrder, $blogid);
@@ -359,10 +363,12 @@ public $cuURL;
         $item_id = intval($data['variables']['itemid']);
         $query   = 'SELECT itags FROM %s WHERE inum = %d';
         $result  = sql_query(sprintf($query, _TAGEX_TABLE, $item_id));
-        if (sql_num_rows($result) > 0) {
-            $itags  = sql_result($result,0,0);
+		$oldforj = '';
+		$itags   = '';
+        if ($result && ($o = sql_fetch_object($result))) {
+            $itags  = $o->itags;
+			$oldforj = str_replace("\n", '\n', htmlspecialchars($itags, ENT_QUOTES, _CHARSET));
         }
-        $oldforj = str_replace("\n", '\n', htmlspecialchars($itags, ENT_QUOTES, _CHARSET));
 //        $blogid  = getBlogIDFromItemID($item_id);
         $blogid  = intval($data['blog']->blogid);//$blogid);
 // Call exstra form
@@ -378,8 +384,8 @@ public $cuURL;
             return;
         }
         $inum   = intval($data['itemid']);
-        $query  = 'INSERT INTO %s (inum, itags) VALUES (%d, %s)';
-        $query  = sprintf($query, _TAGEX_TABLE, $inum, $this->quote_smart($itags));
+        $query  = 'INSERT INTO %s (inum, itags, itagreg) VALUES (%d, %s, %d)';
+        $query  = sprintf($query, _TAGEX_TABLE, $inum, $this->quote_smart($itags), time());
         sql_query($query);
         $temp_tags_array = preg_split("/[\r\n,]+/", $itags);
         for ($i=0; $i < count($temp_tags_array); $i++) {
@@ -400,8 +406,8 @@ public $cuURL;
         $query = 'DELETE FROM %s WHERE inum = %d';
         sql_query(sprintf($query, _TAGEX_TABLE, $inum));
         if (!empty($itags)) {
-            $query  = 'INSERT INTO %s (inum, itags) VALUES (%d, %s)';
-            $query  = sprintf($query, _TAGEX_TABLE, $inum, $this->quote_smart($itags));
+            $query  = 'INSERT INTO %s (inum, itags, itagreg) VALUES (%d, %s, %d)';
+            $query  = sprintf($query, _TAGEX_TABLE, $inum, $this->quote_smart($itags), time());
             sql_query($query);
         }
         $old_tags_array = $this->getTags($oldTags);
@@ -467,10 +473,10 @@ public $cuURL;
                  . '       AND inums REGEXP "(^|,)' . $inum . '(,|$)"'
                  . ' ORDER BY ireg DESC';
         $findres = sql_query($f_query);
-        if (sql_num_rows($findres) == 0) {
+        if (!$findres || !($row=sql_fetch_row($findres)) || empty($row)) {
             return;
         }
-        $temp_inums = sql_result($findres, 0, 0);
+        $temp_inums = $row[0];
         if (preg_match('/^\d+$/', $temp_inums) && $inum == $temp_inums) {
             $query = 'DELETE FROM %s WHERE tag = %s';
             sql_query(sprintf($query, _TAGEX_KLIST_TABLE, $tag));
@@ -510,19 +516,19 @@ public $cuURL;
                  . ' ORDER BY ireg DESC';
         $findres = sql_query($f_query);
         
-        if (sql_num_rows($findres) > 0) {
-            $temp_inums  = sql_result($findres, 0, 0);
+        if ($findres && ($row=sql_fetch_row($findres)) && !empty($row)) {
+            $temp_inums  = $row[0];
             $inums_array = explode(',', $temp_inums);
             if (!in_array($inum, $inums_array)) {
                 $inums       = $temp_inums . ',' . $inum;
                 $inums_count = count($inums_array) + 1;
             }
         } else {
-            $q_query    = 'INSERT INTO %s (tag, inums, inums_count) VALUES (%s, %d, 1)';
-            sql_query(sprintf($q_query, _TAGEX_KLIST_TABLE, $tag, intval($inum)));
+            $q_query    = 'INSERT INTO %s (tag, inums, inums_count, ireg) VALUES (%s, %d, 1, %d)';
+            sql_query(sprintf($q_query, _TAGEX_KLIST_TABLE, $tag, intval($inum), time()));
         }
 
-        if (!empty($inums)) {
+        if (isset($inums) && !empty($inums)) {
             $q_query    = 'UPDATE %s SET inums = %s, inums_count = %d WHERE tag = %s';
             $iCount     = intval($inums_count);
             $quoteInums = $this->quote_smart($inums);
@@ -534,6 +540,7 @@ public $cuURL;
     {
 /// Select Items when Categories or Sub-categories or Archive selected
         global $manager, $CONF, $blog, $catid, $archive;
+		$mtable = '';
         if (!$narrowMode) {
             return;
         }
@@ -568,7 +575,7 @@ public $cuURL;
                     $tres_query = 'SELECT * FROM %s WHERE scatid = %d';
                     $tres_query = sprintf($tres_query, $scatTable, $subcatid);
                     $tres       = sql_query($tres_query);
-                    $ra         = sql_fetch_array($tres, MYSQL_ASSOC);
+                    $ra         = sql_fetch_assoc($tres);
                     if (array_key_exists('parentid', $ra)) {
                         $Children = array();
                         $Children = explode('/', $subcatid . $this->getChildren($subcatid));
@@ -616,7 +623,7 @@ public $cuURL;
                 . ' WHERE i.idraft = 0'
                 . $where;
         $res    = sql_query(sprintf($iquery, sql_table('item')));
-        while ($row = sql_fetch_row($res)) {
+        while ($res && ($row = sql_fetch_row($res))) {
             $existInums[] = $row[0];
         }
         return $existInums;
@@ -692,10 +699,11 @@ public $cuURL;
         } else {
             $blogid = intval(getBlogIDFromName($blogid));
         }
+		$tagsk = array();
         $existInums = array();
         $existInums = $this->scanExistItem($narrowMode, $blogid);
         $res        = sql_query(sprintf('SELECT * FROM %s', _TAGEX_KLIST_TABLE));
-        while ($o = sql_fetch_object($res)) {
+        while ($res && ($o = sql_fetch_object($res))) {
             $tagsk[$o->tag] = explode(',', $o->inums);
             if ($existInums) {
                 $tagsk[$o->tag] = array_intersect($tagsk[$o->tag], $existInums);
@@ -764,15 +772,15 @@ public $cuURL;
     function splitRequestTags($q)
     {
 // extract TAGs to array
+        $res     = array(
+                         'and' => array(),
+                         'or'  => array(),
+                        );
         if(strpos($q,'%')!==false) $q = rawurldecode($q);
         if (!strpos($q, '+') && !strpos($q, ':')) {
             $res['and'][0] = $q;
             return $res;
         }
-        $res     = array(
-                         'and' => array(),
-                         'or'  => array(),
-                        );
         $tempAnd = explode('+', $q);
         $andCnt  = count($tempAnd);
         for ($i=0; $i < $andCnt; $i++) {
@@ -795,7 +803,7 @@ public $cuURL;
             $requestT = rawurldecode($requestT);
             $reqTagsArr = $this->splitRequestTags($requestT);
             $reqAND     = array_map(array(&$this, "_rawdecode"), $reqTagsArr['and']);
-            if ($requestTarray['or']) {
+            if ($reqTagsArr['or']) {
                 $reqOR = array_map(array(&$this, "_rawdecode"), $reqTagsArr['or']);
             }
         } else {
@@ -836,6 +844,8 @@ public $cuURL;
         }
 // default amount
         $amount = (!empty($amount)) ?  intval($amount):  99999999;
+
+		$reqAND = '';
 
         $defaultType = array('list', '1', '0', '1', '4');
         $type        = $type + $defaultType;
@@ -889,7 +899,7 @@ public $cuURL;
                 if ($skinType == 'item') {
                     $q   = 'SELECT * FROM %s WHERE inum = %d';
                     $res = sql_query(sprintf($q, _TAGEX_TABLE, $itemid));
-                    while ($o = sql_fetch_object($res)) {
+                    while ($res && ($o = sql_fetch_object($res))) {
                         $temp_tags_array = preg_split("/[\n,]+/", trim($o->itags));
                         $temp_tags_count = count($temp_tags_array);
                         for ($i=0; $i < $temp_tags_count; $i++) {
@@ -952,7 +962,7 @@ public $cuURL;
                         }
                     }
                     foreach ($tags as $tag => $inums) {
-                        if ($selected) {
+                        if (isset($selected) && $selected) {
                             if (!in_array($tag, $req)) {
 // shiborikomi
 //                            if (!in_array($tag, $req) && !array_diff($tags[$tag], $selected)) {
@@ -1007,10 +1017,10 @@ public $cuURL;
                                  . '   inumber in (' . implode(',', $iids) . ') '
                                  . 'ORDER BY '
                                  . '   inumber';
-                        $sTitles = sql_query($qQuery);
+                        $res_sTitles = sql_query($qQuery);
                         $i       = 0;
-                        while ($sTitle = sql_fetch_assoc($sTitles)) {
-                            $shortTitle = mb_convert_encoding($sTitle['short_title'], _CHARSET, _CHARSET);
+                        while ($res_sTitles && ($sTitle = sql_fetch_assoc($res_sTitles))) {
+                            $shortTitle = mb_convert_encoding($sTitle['short_title'], _CHARSET, _CHARSET); // Do you want to do this?: $shortTitle = (string) $sTitle['short_title'];
                             $shortTitle = htmlspecialchars($shortTitle, ENT_QUOTES, _CHARSET);
                             $printData['tagItem']
                                         = array(
@@ -1028,7 +1038,7 @@ public $cuURL;
  * comment out this line when nodisplay selected TAGs */
 //                        $req = ($reqOR) ? array_merge($reqAND, $reqOR) : $reqAND;
 /*********************/
-                        if ($req && !in_array($tag, $req)) {
+                        if (isset($req) && $req && !in_array($tag, $req)) {
                             $printData['and'] = array(
                                 'andurl' => $this->creatTagLink($tag, $type[1], $requestT, '+')    //AND link
                                                      );
@@ -1093,7 +1103,7 @@ public $cuURL;
         $iid = intval($item->itemid);
         $q   = 'SELECT * FROM %s WHERE inum = %d';
         $res = sql_query(sprintf($q, _TAGEX_TABLE, $iid));
-        while ($o = sql_fetch_object($res)) {
+        while ($res && ($o = sql_fetch_object($res))) {
             $temp_tags_array = preg_split("/[\n,]+/", trim($o->itags));
             $temp_tags_count = count($temp_tags_array);
             for ($i=0; $i < $temp_tags_count; $i++) {
@@ -1147,7 +1157,7 @@ public $cuURL;
         $mcatTable = sql_table('plug_multiple_categories_sub');
         $que       = sprintf($que, $mcatTable, $subcat_id);
         $res       = sql_query($que);
-        while ($so =  sql_fetch_object($res)) {
+        while ($res && ($so =  sql_fetch_object($res))) {
             $r .= $this->getChildren($so->scatid)
                 . '/'
                 . $so->scatid;
@@ -1263,14 +1273,18 @@ __ORTAGTPL__;
         $this->createOption('highlight',         _NPTAGEX_HILIGHT_NORM, 'text',     '<span class="highlight">\0</span>');
         $this->createOption('maxTagLevel',       _NPTAGEX_MAX_TAGLEBEL, 'text',     '6', 'datatype=numerical');
         $this->createOption('minTagLevel',       _NPTAGEX_MIN_TAGLEBEL, 'text',     '1', 'datatype=numerical');
-        $table_q = 'CREATE TABLE IF NOT EXISTS ' . _TAGEX_TABLE . ' ('
+
+		$INT_AUTO_INCREMENT_PRIMARY_KEY = 'INT(9) NOT NULL AUTO_INCREMENT PRIMARY KEY';
+		if (isset($this->is_db_sqlite) && $this->is_db_sqlite)
+			$INT_AUTO_INCREMENT_PRIMARY_KEY = 'INTEGER PRIMARY KEY AUTOINCREMENT';
+		$table_q = 'CREATE TABLE IF NOT EXISTS ' . _TAGEX_TABLE . ' ('
                  . " `inum`    INT(9)        NOT NULL default '0' PRIMARY KEY, "
                  . ' `itags`   TEXT          NOT NULL, '
                  . ' `itagreg` TIMESTAMP NOT NULL'
                  . ' )';
         sql_query($table_q);
         $table_q = 'CREATE TABLE IF NOT EXISTS ' . _TAGEX_KLIST_TABLE . ' ('
-                 . ' `listid`      INT(9)        NOT NULL AUTO_INCREMENT PRIMARY KEY, '
+                 . " `listid`      $INT_AUTO_INCREMENT_PRIMARY_KEY, "
                  . ' `tag`         VARCHAR(255)           default NULL, '
                  . ' `inums`       TEXT          NOT NULL, '
                  . " `inums_count` INT(11)       NOT NULL default '0', "
