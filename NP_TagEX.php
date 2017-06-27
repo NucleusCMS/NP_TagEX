@@ -1075,8 +1075,8 @@ public $cuURL;
             case 'title':
                 if ($reqAND) {
                     $req  = ($reqOR) ? array_merge($reqAND, $reqOR) : $reqAND;
-                    $data = htmlspecialchars(implode('|', $req), ENT_QUOTES, _CHARSET);
-                    echo ' : Selected Tag(s) &raquo; &quot;' . $data . '&quot;';
+                    $data = hsc(join('|', $req));
+                    echo $data;
                 }
                 break;
             default:
